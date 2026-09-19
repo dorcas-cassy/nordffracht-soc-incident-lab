@@ -17,3 +17,6 @@ evidence/*.jpg
 evidence/*.jpeg
 evidence/*.webp
 !evidence/.gitkeep
+!evidence/wazuh-recon.png
+!evidence/wazuh-ssh-auth.png
+!evidence/wazuh-cron-fim.png

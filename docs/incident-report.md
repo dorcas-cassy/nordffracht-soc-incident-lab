@@ -1,61 +1,60 @@
 # NordFracht Logistics — SOC incident report
 
-**Case:** NF-SOC-001
-
-**Environment:** Isolated, self-owned Docker exercise
-
-**Affected asset:** DISPATCH-WKS-04, dispatch department
-**Status:** Draft scenario; validate every observation after running the lab
+| Case detail | Value |
+| --- | --- |
+| Case | NF-SOC-001 |
+| Environment | Isolated, self-owned Docker exercise |
+| Affected asset | `DISPATCH-WKS-04`, dispatch department (`172.18.0.4`) |
+| Observed window | 19 September 2026, 17:47:32–17:47:54 UTC |
+| Status | Detection verified; lab containment actions remain to be completed |
 
 ## Executive summary
 
-In this controlled exercise, an attacker examined the SSH service on a dispatch workstation, tried several passwords against the `dispatch01` account, and used the deliberately weak lab password to sign in. The attacker then added a scheduled task that writes a harmless local marker once per minute. The sequence models how an exposed administrative service and weak credentials could permit unauthorized access and persistence. The lab does not simulate data theft or a real external callback. The recommended response is to remove the scheduled task, reset the account password, restrict SSH access, and review the Wazuh evidence for the full sequence. This report must be finalized with the observed timestamps, IP addresses and rule IDs after the exercise.
+In this controlled exercise, an attacker scanned the SSH service on a dispatch workstation, tried three passwords for the `dispatch01` account, and signed in using the deliberately weak lab password. The attacker then installed a scheduled task that writes a harmless local log marker once per minute. Wazuh recorded evidence for each stage: an SSH pre-authentication event, failed and successful logins, and a new crontab file. This demonstrates how a reachable SSH service and weak credentials can lead to unauthorized access and a recurring task. The supplied commands did not access freight records or send data outside the lab. Remove the task, rotate the account password, restrict SSH access, and review the related endpoint events before closing the case.
 
 ## Scope and evidence
 
-The affected asset is the Ubuntu container `DISPATCH-WKS-04`. The attacker is a separate container on the same Docker network. Evidence sources are Nmap and Hydra terminal output, target `/var/log/auth.log`, Wazuh SSH alerts, and Wazuh file integrity alerts for the user's crontab. Screenshots belong in `../evidence/` after the exercise.
+The attacker container (`172.18.0.6`) and Ubuntu target (`172.18.0.4`) shared only the local Compose network. The analyst correlated Nmap and Hydra terminal output with `/var/log/auth.log`, Wazuh SSH alerts, and Wazuh file integrity monitoring (FIM). Dashboard screenshots are saved as [recon](../evidence/wazuh-recon.png), [SSH authentication](../evidence/wazuh-ssh-auth.png), and [cron file details](../evidence/wazuh-cron-fim.png). All times below are UTC; the screenshots show Berlin local time (UTC+2).
 
 ## Technical timeline
 
-| Time (timezone shown in dashboard) | Event | Evidence / Wazuh rule |
+| Time (UTC, 19 Sep 2026) | Event | Evidence / Wazuh rule |
 | --- | --- | --- |
-| [RECON_TIMESTAMP] | The attacker at [ATTACKER_IP] scanned TCP/22 on [TARGET_IP]. | Nmap output; SSH pre-auth event if present, rule [RECON_RULE_ID] |
-| [FIRST_FAILURE_TIMESTAMP] | `dispatch01` received failed SSH password attempts from [ATTACKER_IP]. | `/var/log/auth.log`; Wazuh rule [FAILURE_RULE_ID] |
-| [SUCCESS_TIMESTAMP] | `dispatch01` authenticated from [ATTACKER_IP]. | SSH success event; Wazuh rule [SUCCESS_RULE_ID] |
-| [CRON_CHANGE_TIMESTAMP] | The attacker installed a cron entry for `dispatch01`. | FIM event on `/var/spool/cron/crontabs/dispatch01`; Wazuh rule [FIM_RULE_ID] |
+| 17:47:32.830 | The attacker scanned TCP/22 on `172.18.0.4` with Nmap. It found OpenSSH 9.6p1. | Nmap output and SSH key-exchange-close alert, rule `100100`. The alert itself does not contain the source IP; the adjacent target SSH connection log identifies `172.18.0.6`. |
+| 17:47:40.886–17:47:42.845 | Hydra tried a three-password list for `dispatch01`; two guesses failed. | Hydra output; PAM failure rule `5503` and SSH failed-password rule `5760`, both associated with `172.18.0.6`. |
+| 17:47:44.847 | `dispatch01` authenticated over SSH from `172.18.0.6`. | Hydra success output and Wazuh SSH authentication-success rule `5715`. |
+| 17:47:54.300 | A user crontab was created for `dispatch01`. | Wazuh FIM file-added rule `554` on `/var/spool/cron/crontabs/dispatch01`. A second SSH login used to install the task produced rule `5715` at 17:47:54.854. |
 
-If a stage produced no Wazuh alert, replace its rule placeholder with `No alert observed` and explain the gap in the analyst assessment below.
+## Indicators and artifacts
 
-## Indicators of compromise and artifacts
-
-| Indicator / artifact | Value | Analyst interpretation |
+| Indicator / artifact | Observed value | Analyst interpretation |
 | --- | --- | --- |
-| Source container IP | [ATTACKER_IP] | Correlate across SSH failures and success; lab address only |
-| Target container IP | [TARGET_IP] | Dispatch workstation in the Docker network |
-| Account | `dispatch01` | Deliberately weak lab account used for SSH |
-| Persistence location | `/var/spool/cron/crontabs/dispatch01` | User crontab modified after login |
-| Scheduled command | `/usr/bin/logger -t nordfracht-lab simulated-callback-no-network` | Harmless local marker; no remote endpoint |
+| Source container IP | `172.18.0.6` | Lab attacker address in SSH failures and success; correlate the recon event with the adjacent connection log. |
+| Target container IP | `172.18.0.4` | Dispatch workstation in the Compose network. |
+| Account | `dispatch01` | Deliberately weak lab account used for SSH. |
+| Persistence location | `/var/spool/cron/crontabs/dispatch01` | New user crontab detected by FIM. |
+| Scheduled command | `/usr/bin/logger -t nordfracht-lab simulated-callback-no-network` | Local log marker only; no remote endpoint or callback. |
 
 ## Root cause
 
-The lab deliberately enables password authentication on SSH and assigns `dispatch01` a weak, known password. The attacker can reach TCP/22 from the lab network. That combination permits the short password trial and subsequent interactive SSH access. The cron service then accepts a user-level scheduled task. These are exercise conditions; they are not claims about a real NordFracht environment.
+The lab deliberately allowed password authentication to a reachable SSH service and assigned `dispatch01` a weak, known password. The three-entry password trial found that password, allowing user-level SSH access. The account could then create its own cron task. These are exercise conditions, not claims about a real NordFracht environment.
 
 ## Business impact
 
-In the simulation, the attacker obtains access to one dispatch workstation account and creates a recurring task. No freight records, customer data, payment systems or other hosts are accessed by the supplied commands. In a real logistics environment, an uncontained workstation compromise could interrupt dispatch operations or expose shipment data, but this lab does not measure such impact.
+The observed impact is access to one simulated dispatch account and creation of a recurring local task. The supplied exercise did not access shipment data, customer records, other hosts, or an external network destination. In a real logistics environment, a similar uncontained account compromise could disrupt dispatch operations or expose shipment information; this lab does not establish that such damage occurred.
 
-## Analyst assessment
+## Analyst assessment and detection limits
 
-Correlate the source IP, `dispatch01` username and event times across the three stages. The Nmap output establishes that the scan was run; the Wazuh recon rule only suggests a pre-auth SSH probe. Confirm the exact rule IDs and whether the file integrity alert arrived. Record any missing alert, dashboard delay or time-zone mismatch here before presenting this as observed analyst work.
+The sequence is supported by independent attacker command output and endpoint alerts. Rule `100100` detects an SSH key-exchange close, which is consistent with the Nmap service probe but does not, by itself, prove a scan or identify its source. The two failed-password alerts followed by rule `5715` and the FIM rule `554` establish the login and crontab creation. The FIM alert proves that the crontab file was added; the scheduled command should also be verified with `crontab -u dispatch01 -l` before case closure.
 
 ## Containment and remediation
 
-1. Remove the `dispatch01` crontab entry and inspect the account's other scheduled tasks.
-2. Reset the `dispatch01` password and review other accounts for weak or reused passwords.
+1. Remove the simulated `dispatch01` crontab and verify that no scheduled task remains.
+2. Rotate the `dispatch01` password and inspect the account for other changes.
 3. Restrict SSH to approved management sources; use key-based authentication and disable password authentication where practical.
-4. Review `/var/log/auth.log` and Wazuh events around [FIRST_FAILURE_TIMESTAMP] through [CRON_CHANGE_TIMESTAMP] for additional logins or changes.
-5. Keep Wazuh file integrity monitoring on user crontabs and tune alerting for repeated SSH failures and successful logins after failures.
+4. Review `/var/log/auth.log` and Wazuh events from 17:47:32–17:47:54 UTC for additional activity.
+5. Keep FIM on user crontabs and tune alerting for repeated SSH failures followed by successful login.
 
 ## Closure criteria
 
-The cron entry is removed, the account credential is rotated, SSH exposure is reduced, and the timeline is supported by saved event details. Mark this report final only after those checks and the bracketed fields have been completed from the actual lab run.
+This report records a completed detection exercise, not a completed containment. Close the case after removing the cron entry, rotating the lab credential, checking for other changes, and saving the verification results. The Compose lab can then be stopped with `./scripts/lab.sh down`.

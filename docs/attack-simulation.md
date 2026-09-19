@@ -14,7 +14,7 @@ Save the attacker's container IP for your report:
 ./scripts/lab.sh exec -T attacker nmap -sT -sV --version-all -p 22 --open dispatch-wks-04
 ```
 
-**Dashboard check:** Look for rule `100100`, an `sshd` message saying `Connection closed by`, and a source IP matching the attacker container. Save the Nmap terminal output too. This rule reports a pre-auth SSH artifact, so a clean scan result without the alert is a visibility gap to record, not proof that scanning did not occur. The endpoint agent does not collect all network probe traffic.
+**Dashboard check:** Look for rule `100100` and an `sshd` message containing `kex_exchange_identification: Connection closed by remote host`. Save the Nmap terminal output too. This rule reports an SSH key-exchange artifact, so a clean scan result without the alert is a visibility gap to record, not proof that scanning did not occur. The endpoint agent does not collect all network probe traffic; corroborate the attacker's IP with the adjacent target `/var/log/auth.log` connection line.
 
 ## 2. Brute force — T1110 Brute Force
 
@@ -38,7 +38,7 @@ This uses the compromised account to add a recurring **local syslog marker**. It
 
 ## Capture, document, clean up
 
-Save screenshots showing the active agent, SSH alerts, file integrity alert and event details in `evidence/`. Fill only the bracketed timestamps, IPs and rule IDs in `docs/incident-report.md`; if an expected alert is absent, state that in the report instead of inventing evidence.
+The repository includes screenshots and an incident report from the observed 19 September 2026 run. For a repeat run, save your own screenshots in `evidence/` and make a copy of `docs/incident-report.md` with your own timestamps, IPs and rule IDs. If an expected alert is absent, state that in the report instead of inventing evidence.
 
 To remove the simulated persistence while keeping the lab running:
 

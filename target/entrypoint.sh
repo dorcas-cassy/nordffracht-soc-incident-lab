@@ -3,6 +3,8 @@ set -eu
 
 mkdir -p /run/sshd /var/spool/cron/crontabs
 touch /var/log/auth.log
+chown syslog:adm /var/log/auth.log
+chmod 0640 /var/log/auth.log
 rsyslogd
 cron
 
