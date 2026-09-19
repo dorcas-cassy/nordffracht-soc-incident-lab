@@ -1,0 +1,9 @@
+<group name="nordfracht,sshd,recon,">
+  <!-- A service/version probe can close an SSH connection before authentication. -->
+  <rule id="100100" level="5">
+    <program_name>sshd</program_name>
+    <match>Connection closed by</match>
+    <description>NordFracht: SSH pre-auth connection closed; investigate possible scanning</description>
+    <group>authentication_failed,</group>
+  </rule>
+</group>

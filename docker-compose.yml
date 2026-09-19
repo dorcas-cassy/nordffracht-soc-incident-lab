@@ -1,0 +1,42 @@
+# Overlay for the official Wazuh v4.14.7 single-node Compose file.
+# Use ./scripts/lab.sh so both files share one Compose project and network.
+services:
+  wazuh.manager:
+    # Adds a lab-specific SSH recon rule to the official manager.
+    # The target agent reaches this service through the private Compose network.
+    ports: !override []
+    volumes:
+      - ${LAB_ROOT}/config/local_rules.xml:/var/ossec/etc/rules/local_rules.xml:ro
+
+  wazuh.indexer:
+    # The search API has no reason to be published beyond the lab network.
+    ports: !override []
+
+  wazuh.dashboard:
+    # Keep the UI on loopback only; Docker Compose 2.24.4+ supports !override.
+    ports: !override
+      - "127.0.0.1:8443:5601"
+
+  dispatch-wks-04:
+    # Fictional dispatch workstation: Ubuntu, SSH, cron, rsyslog and Wazuh agent.
+    build: ${LAB_ROOT}/target
+    hostname: DISPATCH-WKS-04
+    restart: unless-stopped
+    depends_on:
+      - wazuh.manager
+    volumes:
+      - dispatch-agent-etc:/var/ossec/etc
+    # SSH is intentionally reachable only from the Compose network.
+    expose:
+      - "22"
+
+  attacker:
+    # Isolated exercise host with nmap, hydra and an SSH client.
+    build: ${LAB_ROOT}/attacker
+    hostname: ATTACKER-LAB
+    command: ["sleep", "infinity"]
+    depends_on:
+      - dispatch-wks-04
+
+volumes:
+  dispatch-agent-etc:
