@@ -31,7 +31,7 @@ ATT&CK labels classify behavior; a rule firing alone does not prove intent. The 
 
 ## Run the lab
 
-Requirements: Docker Engine/Desktop with Compose **2.24.4 or newer**, Git, at least **4 CPU cores, 8 GB RAM and 50 GB disk** for the Docker host, with **20 GB free before setup**, and internet access for the first image and package downloads. The setup script checks free host disk space before starting. On Linux, the Wazuh indexer may require `sudo sysctl -w vm.max_map_count=262144` before startup; see the [Wazuh Docker deployment guide](https://documentation.wazuh.com/current/deployment-options/docker/wazuh-container.html).
+Requirements: Docker Engine/Desktop with Compose **2.24.4 or newer**, Git, at least **4 CPU cores, 8 GB RAM and 50 GB disk** for the Docker host, with **20 GB free for first setup** (10 GB for a restart with the Wazuh images cached), and internet access for the first image and package downloads. The setup script checks free host disk space before starting. On Linux, the Wazuh indexer may require `sudo sysctl -w vm.max_map_count=262144` before startup; see the [Wazuh Docker deployment guide](https://documentation.wazuh.com/current/deployment-options/docker/wazuh-container.html).
 
 ```sh
 ./scripts/setup.sh

@@ -4,12 +4,19 @@ set -eu
 LAB_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 UPSTREAM="$LAB_ROOT/.runtime/wazuh-docker"
 
-# The single-node stack and its first-run downloads need substantial headroom.
-# Abort before pulling images if the host is too close to full.
+# First-run image downloads need more headroom than a restart with cached images.
+# Abort before pulling or starting if the host is too close to full.
 FREE_KB=$(df -Pk "$LAB_ROOT" | awk 'NR == 2 { print $4 }')
-MIN_FREE_KB=$((20 * 1024 * 1024))
+MIN_FREE_GB=20
+if docker image inspect \
+  wazuh/wazuh-manager:4.14.7 \
+  wazuh/wazuh-indexer:4.14.7 \
+  wazuh/wazuh-dashboard:4.14.7 >/dev/null 2>&1; then
+  MIN_FREE_GB=10
+fi
+MIN_FREE_KB=$((MIN_FREE_GB * 1024 * 1024))
 if [ -z "$FREE_KB" ] || [ "$FREE_KB" -lt "$MIN_FREE_KB" ]; then
-  echo 'At least 20 GB of free host disk space is required before starting this lab.' >&2
+  echo "At least $MIN_FREE_GB GB of free host disk space is required before starting this lab." >&2
   echo 'Free space, then rerun ./scripts/setup.sh.' >&2
   exit 1
 fi
