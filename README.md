@@ -17,6 +17,8 @@ flowchart LR
 
 The stack uses the [official Wazuh Docker single-node quickstart](https://github.com/wazuh/wazuh-docker/tree/v4.14.7/single-node), pinned to **v4.14.7**. `scripts/setup.sh` downloads that tagged upstream Compose/configuration into the ignored `.runtime/` directory, stages a copy under the host's temporary directory for Docker bind mounts, generates the upstream TLS certificates, then applies this repository's Compose overlay. The target image installs the matching Wazuh agent version and enrolls itself on first start. No cloud services are needed; the initial image/package downloads need internet access.
 
+The staged manager configuration disables Wazuh's vulnerability feed. This exercise detects SSH activity and cron changes; vulnerability scanning is outside its scope and can consume substantial disk space on a small lab host.
+
 ## Attack chain and evidence
 
 | Stage | ATT&CK | Exercise action | Expected evidence |
@@ -29,7 +31,7 @@ ATT&CK labels classify behavior; a rule firing alone does not prove intent. The 
 
 ## Run the lab
 
-Requirements: Docker Engine/Desktop with Compose **2.24.4 or newer**, Git, at least **4 CPU cores, 8 GB RAM and 50 GB disk** for the Docker host, and internet access for the first image and package downloads. On Linux, the Wazuh indexer may require `sudo sysctl -w vm.max_map_count=262144` before startup; see the [Wazuh Docker deployment guide](https://documentation.wazuh.com/current/deployment-options/docker/wazuh-container.html).
+Requirements: Docker Engine/Desktop with Compose **2.24.4 or newer**, Git, at least **4 CPU cores, 8 GB RAM and 50 GB disk** for the Docker host, with **20 GB free before setup**, and internet access for the first image and package downloads. The setup script checks free host disk space before starting. On Linux, the Wazuh indexer may require `sudo sysctl -w vm.max_map_count=262144` before startup; see the [Wazuh Docker deployment guide](https://documentation.wazuh.com/current/deployment-options/docker/wazuh-container.html).
 
 ```sh
 ./scripts/setup.sh

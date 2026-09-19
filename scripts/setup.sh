@@ -4,6 +4,16 @@ set -eu
 LAB_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 UPSTREAM="$LAB_ROOT/.runtime/wazuh-docker"
 
+# The single-node stack and its first-run downloads need substantial headroom.
+# Abort before pulling images if the host is too close to full.
+FREE_KB=$(df -Pk "$LAB_ROOT" | awk 'NR == 2 { print $4 }')
+MIN_FREE_KB=$((20 * 1024 * 1024))
+if [ -z "$FREE_KB" ] || [ "$FREE_KB" -lt "$MIN_FREE_KB" ]; then
+  echo 'At least 20 GB of free host disk space is required before starting this lab.' >&2
+  echo 'Free space, then rerun ./scripts/setup.sh.' >&2
+  exit 1
+fi
+
 if [ ! -d "$UPSTREAM/.git" ]; then
   mkdir -p "$LAB_ROOT/.runtime"
   git clone --depth 1 --branch v4.14.7 \
@@ -31,6 +41,12 @@ if [ ! -f "$STAGED_UPSTREAM/single-node/docker-compose.yml" ]; then
 fi
 cp "$LAB_ROOT/config/local_rules.xml" \
   "$STAGED_UPSTREAM/single-node/config/nordfracht-local-rules.xml"
+
+# This exercise uses SSH and file-integrity alerts, not the vulnerability feed.
+# Disable its large background database download in the staged manager config.
+MANAGER_CONF="$STAGED_UPSTREAM/single-node/config/wazuh_cluster/wazuh_manager.conf"
+sed '/<vulnerability-detection>/,/<\/vulnerability-detection>/ s/<enabled>yes<\/enabled>/<enabled>no<\/enabled>/' \
+  "$UPSTREAM/single-node/config/wazuh_cluster/wazuh_manager.conf" > "$MANAGER_CONF"
 
 CERT_DIR="$STAGED_UPSTREAM/single-node/config/wazuh_indexer_ssl_certs"
 if [ ! -f "$CERT_DIR/root-ca.pem" ]; then
