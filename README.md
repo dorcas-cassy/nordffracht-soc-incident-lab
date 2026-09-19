@@ -15,7 +15,7 @@ flowchart LR
     D -->|manager API| M
 ```
 
-The stack uses the [official Wazuh Docker single-node quickstart](https://github.com/wazuh/wazuh-docker/tree/v4.14.7/single-node), pinned to **v4.14.7**. `scripts/setup.sh` downloads that tagged upstream Compose/configuration into the ignored `.runtime/` directory, generates the upstream TLS certificates, then applies this repository's Compose overlay. The target image installs the matching Wazuh agent version and enrolls itself on first start. No cloud services are needed; the initial image/package downloads need internet access.
+The stack uses the [official Wazuh Docker single-node quickstart](https://github.com/wazuh/wazuh-docker/tree/v4.14.7/single-node), pinned to **v4.14.7**. `scripts/setup.sh` downloads that tagged upstream Compose/configuration into the ignored `.runtime/` directory, stages a copy under the host's temporary directory for Docker bind mounts, generates the upstream TLS certificates, then applies this repository's Compose overlay. The target image installs the matching Wazuh agent version and enrolls itself on first start. No cloud services are needed; the initial image/package downloads need internet access.
 
 ## Attack chain and evidence
 

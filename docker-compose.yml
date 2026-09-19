@@ -6,7 +6,7 @@ services:
     # The target agent reaches this service through the private Compose network.
     ports: !override []
     volumes:
-      - ${LAB_ROOT}/config/local_rules.xml:/var/ossec/etc/rules/local_rules.xml:ro
+      - ${LAB_RULES_FILE}:/var/ossec/etc/rules/local_rules.xml:ro
 
   wazuh.indexer:
     # The search API has no reason to be published beyond the lab network.
